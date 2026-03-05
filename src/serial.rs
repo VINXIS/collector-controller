@@ -38,6 +38,7 @@ impl SerialConnection {
         }
     }
 
+    /// Checks for connected arduinos, runs at first and then periodically
     pub fn scan_ports() -> Vec<String> {
         serialport::available_ports()
             .unwrap_or_default()
@@ -46,6 +47,7 @@ impl SerialConnection {
             .collect()
     }
 
+    /// Live
     pub fn connect(&mut self, log: &mut VecDeque<String>) {
         match serialport::new(&self.port_name, 115200)
             .timeout(Duration::from_millis(50))
@@ -68,12 +70,14 @@ impl SerialConnection {
         }
     }
 
+    /// Die
     pub fn disconnect(&mut self, log: &mut VecDeque<String>) {
         self.port = None;
         self.connected = false;
         push_log(log, "Disconnected.");
     }
 
+    /// Command send to port
     pub fn send(&mut self, cmd: &str, log: &mut VecDeque<String>) {
         let failed = if let Some(port) = &self.port {
             if let Ok(mut p) = port.lock() {
@@ -91,6 +95,7 @@ impl SerialConnection {
         }
     }
 
+    /// Goodbye
     pub fn mark_disconnected(&mut self, log: &mut VecDeque<String>) {
         self.connected = false;
         self.port = None;
@@ -98,6 +103,7 @@ impl SerialConnection {
         push_log(log, "Connection lost.");
     }
 
+    /// Checks if port is still readable
     pub fn is_alive(&self) -> bool {
         self.port
             .as_ref()
