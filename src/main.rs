@@ -9,8 +9,7 @@ fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("Collector Controller")
-            .with_inner_size([420.0, 520.0])
-            .with_resizable(false),
+            .with_inner_size([420.0, 520.0]),
         ..Default::default()
     };
     eframe::run_native(
