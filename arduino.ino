@@ -9,12 +9,12 @@
 #define REPORT_INTERVAL_MS 2000
 
 bool running = true;
-float currentRPM = 8.0;
+float currentRPM = 0.1;
 unsigned long stepPeriodUs, lastStepTime, lastReportTime;
 String inputBuffer = "";
 
 void setRPM(float rpm) {
-  if (rpm <= 0 || rpm > 600) return;
+  if (rpm <= 0 || rpm > 100) return;
   currentRPM = rpm;
   stepPeriodUs = (unsigned long)(60000000.0f / (rpm * STEPS_PER_REV));
 }
@@ -23,7 +23,7 @@ void printState() {
   Serial.print("STATE:");
   Serial.print(running ? "RUNNING" : "STOPPED");
   Serial.print(" RPM:");
-  Serial.print(currentRPM, 1);
+  Serial.print(currentRPM, 3);
   Serial.print(" DIR:");
   Serial.println(digitalRead(DIR_PIN));
 }
@@ -50,12 +50,12 @@ void handleCommand(String cmd) {
     printState();
   } else if (cmd.startsWith("S")) {
     float rpm = cmd.substring(1).toFloat();
-    if (rpm > 0 && rpm <= 600) {
+    if (rpm > 0 && rpm <= 100) {
       setRPM(rpm);
       Serial.print("RPM_SET:");
-      Serial.println(rpm, 1);
+      Serial.println(rpm, 3);
     } else {
-      Serial.println("ERR:RPM must be 1-600");
+      Serial.println("ERR:RPM must be >=0-100");
     }
   } else {
     Serial.println("ERR:Unknown command");
