@@ -6,21 +6,46 @@ pub struct MotorState {
     pub rpm: f32,
     pub direction: u8,
     pub reported_rpm: Option<f32>,
+    pub diameter_mm: f32,
+    pub ms: f32, // meter/second calc'd from RPM and diameter
 }
 
 impl Default for MotorState {
     fn default() -> Self {
         // See arduino.ino for the defaults
+        let rpm: f32 = 0.1;
+        let diameter_mm: f32 = 100.0;
         Self {
             running: true,
-            rpm: 8.0,
+            rpm,
             direction: 1,
             reported_rpm: None,
+            diameter_mm,
+            ms: rpm_to_ms(8.0, 100.0),
         }
     }
 }
 
+pub fn rpm_to_ms(rpm: f32, diameter_mm: f32) -> f32 {
+    let circumference_m = std::f32::consts::PI * diameter_mm / 1000.0;
+    circumference_m * rpm / 60.0
+}
+
+pub fn ms_to_rpm(ms: f32, diameter_mm: f32) -> f32 {
+    let circumference_m = std::f32::consts::PI * diameter_mm / 1000.0;
+    if circumference_m > 0.0 {
+        ms * 60.0 / circumference_m
+    } else {
+        0.0
+    }
+}
+
 impl MotorState {
+    fn set_rpm(&mut self, v: f32) {
+        self.rpm = v;
+        self.ms = rpm_to_ms(self.rpm, self.diameter_mm);
+    }
+
     pub fn reset(&mut self) {
         *self = Self::default();
     }
@@ -39,7 +64,7 @@ impl MotorState {
                     .unwrap_or("")
                     .parse::<f32>()
                 {
-                    self.rpm = v;
+                    self.set_rpm(v);
                 }
             }
             if let Some(dir_part) = line.split("DIR:").nth(1) {
@@ -53,8 +78,8 @@ impl MotorState {
             self.reported_rpm = None;
         } else if line.starts_with("RPM_SET:") {
             if let Ok(v) = line[8..].parse::<f32>() {
-                self.rpm = v;
-                push_log(log, &format!("RPM set to {:.0}", v));
+                self.set_rpm(v);
+                push_log(log, &format!("RPM set to {:.3}", v));
             }
         } else {
             push_log(log, line);
@@ -62,7 +87,7 @@ impl MotorState {
     }
 
     pub fn send_start(&self, serial: &mut SerialConnection, log: &mut VecDeque<String>) {
-        let cmd = format!("S{:.0}", self.rpm);
+        let cmd = format!("S{:.3}", self.rpm);
         serial.send(&cmd, log);
         serial.send("START", log);
     }
@@ -72,7 +97,7 @@ impl MotorState {
     }
 
     pub fn send_rpm(&self, serial: &mut SerialConnection, log: &mut VecDeque<String>) {
-        let cmd = format!("S{:.0}", self.rpm);
+        let cmd = format!("S{:.3}", self.rpm);
         serial.send(&cmd, log);
     }
 
