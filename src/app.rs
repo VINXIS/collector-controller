@@ -106,10 +106,14 @@ impl eframe::App for App {
             ui.separator();
             ui.add_space(10.0);
 
+            ui::render_diameter_input(ui, &mut self.motor);
+
             ui::render_rpm_display(ui, &self.motor);
 
             ui.add_space(10.0);
-            ui::render_speed_slider(ui, &mut self.motor, &mut self.serial, &mut self.log);
+            ui::render_rpm_slider(ui, &mut self.motor, &mut self.serial, &mut self.log);
+            ui.add_space(10.0);
+            ui::render_ms_slider(ui, &mut self.motor, &mut self.serial, &mut self.log);
 
             ui.add_space(10.0);
             ui::render_direction_bar(ui, &mut self.motor, &mut self.serial, &mut self.log);

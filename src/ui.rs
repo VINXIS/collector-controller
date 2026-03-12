@@ -1,7 +1,10 @@
-use crate::motor::MotorState;
+use crate::motor::{MotorState, ms_to_rpm, rpm_to_ms};
 use crate::serial::{ConnectionIntent, SerialConnection};
 use eframe::egui::{self, Color32, FontId, RichText, Stroke, Vec2};
 use std::collections::VecDeque;
+
+const MIN_RPM: f32 = 0.01;
+const MAX_RPM: f32 = 100.0;
 
 pub fn apply_theme(ctx: &egui::Context) {
     let mut style = (*ctx.style()).clone();
@@ -70,6 +73,27 @@ pub fn render_port_bar(
     });
 }
 
+pub fn render_diameter_input(ui: &mut egui::Ui, motor: &mut MotorState) {
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        ui.label(
+            RichText::new("DIAMETER  ")
+                .font(FontId::monospace(11.0))
+                .color(Color32::GRAY),
+        );
+        ui.add_space(10.0);
+
+        let old_d = motor.diameter_mm;
+        let drag = egui::DragValue::new(&mut motor.diameter_mm)
+            .clamp_range(1.0..=2000.0)
+            .speed(1.0)
+            .suffix(" mm");
+        if ui.add(drag).changed() && (motor.diameter_mm - old_d).abs() > f32::EPSILON {
+            motor.ms = rpm_to_ms(motor.rpm, motor.diameter_mm);
+        }
+    });
+}
+
 pub fn render_rpm_display(ui: &mut egui::Ui, motor: &MotorState) {
     ui.vertical_centered(|ui| {
         ui.label(
@@ -89,7 +113,7 @@ pub fn render_rpm_display(ui: &mut egui::Ui, motor: &MotorState) {
     });
 }
 
-pub fn render_speed_slider(
+pub fn render_rpm_slider(
     ui: &mut egui::Ui,
     motor: &mut MotorState,
     serial: &mut SerialConnection,
@@ -98,20 +122,54 @@ pub fn render_speed_slider(
     ui.horizontal(|ui| {
         ui.add_space(10.0);
         ui.label(
-            RichText::new("SPEED")
+            RichText::new("SPEED (RPM)")
                 .font(FontId::monospace(11.0))
                 .color(Color32::GRAY),
         );
         ui.add_space(10.0);
+
         let old_rpm = motor.rpm;
-        let slider = egui::Slider::new(&mut motor.rpm, 1.0..=12.0)
-            .integer()
-            .suffix(" RPM");
+        let slider = egui::Slider::new(&mut motor.rpm, MIN_RPM..=MAX_RPM).suffix(" RPM");
+
         if ui.add_sized(Vec2::new(280.0, 20.0), slider).changed()
             && serial.connected
-            && (motor.rpm - old_rpm).abs() >= 1.0
+            && (motor.rpm - old_rpm).abs() >= f32::EPSILON
         {
             motor.send_rpm(serial, log);
+        }
+    });
+}
+
+pub fn render_ms_slider(
+    ui: &mut egui::Ui,
+    motor: &mut MotorState,
+    serial: &mut SerialConnection,
+    log: &mut VecDeque<String>,
+) {
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        ui.label(
+            RichText::new("SPEED (m/s)")
+                .font(FontId::monospace(11.0))
+                .color(Color32::GRAY),
+        );
+        ui.add_space(10.0);
+
+        let old_ms = motor.ms;
+        let min_ms = rpm_to_ms(MIN_RPM, motor.diameter_mm);
+        let max_ms = rpm_to_ms(MAX_RPM, motor.diameter_mm);
+        let slider = egui::Slider::new(&mut motor.ms, min_ms..=max_ms).suffix(" m/s");
+
+        if ui.add_sized(Vec2::new(280.0, 20.0), slider).changed()
+            && serial.connected
+            && (motor.ms - old_ms).abs() >= f32::EPSILON
+        {
+            motor.rpm = ms_to_rpm(motor.ms, motor.diameter_mm);
+            motor.ms = rpm_to_ms(motor.rpm, motor.diameter_mm);
+
+            if serial.connected {
+                motor.send_rpm(serial, log);
+            }
         }
     });
 }
