@@ -5,7 +5,6 @@ pub struct MotorState {
     pub running: bool,
     pub rpm: f32,
     pub direction: u8,
-    pub reported_rpm: Option<f32>,
     pub diameter_mm: f32,
     pub ms: f32, // meter/second calc'd from RPM and diameter
 }
@@ -19,7 +18,6 @@ impl Default for MotorState {
             running: true,
             rpm,
             direction: 1,
-            reported_rpm: None,
             diameter_mm,
             ms: rpm_to_ms(8.0, 100.0),
         }
@@ -53,7 +51,7 @@ impl MotorState {
     pub fn handle_line(&mut self, line: &str, log: &mut VecDeque<String>) {
         if line.starts_with("RPM:") {
             if let Ok(v) = line[4..].parse::<f32>() {
-                self.reported_rpm = Some(v);
+                self.set_rpm(v);
             }
         } else if line.starts_with("STATE:") {
             self.running = line.contains("RUNNING");
@@ -75,7 +73,6 @@ impl MotorState {
             self.running = true;
         } else if line == "STOPPED" {
             self.running = false;
-            self.reported_rpm = None;
         } else if line.starts_with("RPM_SET:") {
             if let Ok(v) = line[8..].parse::<f32>() {
                 self.set_rpm(v);
@@ -104,9 +101,5 @@ impl MotorState {
     pub fn send_direction(&self, serial: &mut SerialConnection, log: &mut VecDeque<String>) {
         let cmd = format!("D{}", self.direction);
         serial.send(&cmd, log);
-    }
-
-    pub fn display_rpm(&self) -> f32 {
-        self.reported_rpm.unwrap_or(self.rpm)
     }
 }

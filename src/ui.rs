@@ -97,7 +97,7 @@ pub fn render_diameter_input(ui: &mut egui::Ui, motor: &mut MotorState) {
 pub fn render_rpm_display(ui: &mut egui::Ui, motor: &MotorState) {
     ui.vertical_centered(|ui| {
         ui.label(
-            RichText::new(format!("{:.1}", motor.display_rpm()))
+            RichText::new(format!("{:.3}", motor.rpm))
                 .font(FontId::monospace(52.0))
                 .color(if motor.running {
                     Color32::from_rgb(255, 140, 0)
