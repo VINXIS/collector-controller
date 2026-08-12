@@ -13,7 +13,7 @@ impl Default for MotorState {
     fn default() -> Self {
         // See arduino.ino for the defaults
         let rpm: f32 = 0.1;
-        let diameter_mm: f32 = 100.0;
+        let diameter_mm: f32 = 20.0;
         Self {
             running: true,
             rpm,
